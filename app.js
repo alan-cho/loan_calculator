@@ -1,8 +1,9 @@
 const HTTP = require("http");
 const URL = require("url").URL;
 const PORT = 3000;
+const HANDLEBARS = require("handlebars");
 
-const HTML_START = `
+const SOURCE = `
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -47,15 +48,47 @@ const HTML_START = `
       <h1>Loan Calculator</h1>
       <table>
         <tbody>
-`;
-
-const HTML_END = `
+          <tr>
+            <th>Amount:</th>
+            <td>
+              <a href='/?amount={{amountDecrement}}&duration={{duration}}'>- $100</a>
+            </td>
+            <td>$ {{amount}}</td>
+            <td>
+              <a href='/?amount={{amountIncrement}}&duration={{duration}}'>+ $100</a>
+            </td>
+          </tr>
+          <tr>
+            <th>Duration:</th>
+            <td>
+              <a href='/?amount={{amount}}&duration={{durationDecrement}}'>- 1 year</a>
+            </td>
+            <td>{{duration}} years</td>
+            <td>
+              <a href='/?amount={{amount}}&duration={{durationIncrement}}'>+ 1 year</a>
+            </td>
+          </tr>
+          <tr>
+            <th>APR:</th>
+            <td colspan='3'>{{apr}}%</td>
+          </tr>
+          <tr>
+            <th>Monthly payment:</th>
+            <td colspan='3'>$ {{payment}}</td>
+          </tr>
         </tbody>
       </table>
     </article>
   </body>
 </html>
 `;
+
+const LOAN_OFFER_TEMPLATE = HANDLEBARS.compile(SOURCE);
+
+function render(template, data) {
+  let html = template(data);
+  return html;
+}
 
 function getParams(path) {
   const myURL = new URL(path, `http://localhost:${PORT}`);
@@ -75,47 +108,18 @@ function calculateLoan(amount, duration, apr) {
 
 function createLoanOffer(params) {
   const APR = 5;
-  let amount = Number(params.get("amount"));
-  let duration = Number(params.get("duration"));
-  let payment = calculateLoan(amount, duration, APR);
-  let content = `<tr>
-                  <th>Amount:</th>
-                    <td>
-                      <a href='/?amount=${
-                        amount - 100
-                      }&duration=${duration}'>- $100</a>
-                    </td>
-                    <td>$${amount}</td>
-                    <td>
-                      <a href='/?amount=${
-                        amount + 100
-                      }&duration=${duration}'>+ $100</a>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th>Duration:</th>
-                    <td>
-                      <a href='/?amount=${amount}&duration=${
-    duration - 1
-  }'>- 1 year</a>
-                    </td>
-                    <td>${duration} years</td>
-                    <td>
-                      <a href='/?amount=${amount}&duration=${
-    duration + 1
-  }'>+ 1 year</a>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th>APR:</th>
-                    <td colspan='3'>${APR}%</td>
-                  </tr>
-                  <tr>
-                    <th>Monthly payment:</th>
-                    <td colspan='3'>$${payment}</td>
-                  </tr>`;
+  let data = {};
 
-  return `${HTML_START}${content}${HTML_END}`;
+  data.amount = Number(params.get("amount"));
+  data.amountIncrement = data.amount + 100;
+  data.amountDecrement = data.amount - 100;
+  data.duration = Number(params.get("duration"));
+  data.durationIncrement = data.duration + 1;
+  data.durationDecrement = data.duration - 1;
+  data.apr = APR;
+  data.payment = calculateLoan(data.amount, data.duration, APR);
+
+  return data;
 }
 
 const SERVER = HTTP.createServer((req, res) => {
@@ -123,10 +127,11 @@ const SERVER = HTTP.createServer((req, res) => {
   let path = req.url;
 
   if (path === "/favicon.ico") {
-    res.statusCode = 404;
+    res.statusCode = 400;
     res.end();
   } else {
-    let content = createLoanOffer(getParams(path));
+    let data = createLoanOffer(getParams(path));
+    let content = render(LOAN_OFFER_TEMPLATE, data);
 
     res.statusCode = 200;
     res.setHeader("Content-Type", "text/html");

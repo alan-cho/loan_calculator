@@ -8,19 +8,54 @@ const HTML_START = `
   <head>
     <meta charset="utf-8">
     <title>Loan Calculator</title>
+    <style type="text/css">
+      body {
+        background: rgba(250, 250, 250);
+        font-family: sans-serif;
+        color: rgb(50, 50, 50);
+      }
+
+      article {
+        width: 100%;
+        max-width: 40rem;
+        margin: 0 auto;
+        padding: 1rem 2rem;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        text-align: center;
+      }
+
+      table {
+        font-size: 1.5rem;
+      }
+      th {
+        text-align: right;
+      }
+      td {
+        text-align: center;
+      }
+      th,
+      td {
+        padding: 0.5rem;
+      }
+    </style>
   </head>
   <body>
     <article>
       <h1>Loan Calculator</h1>
       <table>
-        <tbody>`;
+        <tbody>
+`;
 
 const HTML_END = `
         </tbody>
       </table>
     </article>
   </body>
-</html>`;
+</html>
+`;
 
 function getParams(path) {
   const myURL = new URL(path, `http://localhost:${PORT}`);
@@ -43,10 +78,42 @@ function createLoanOffer(params) {
   let amount = Number(params.get("amount"));
   let duration = Number(params.get("duration"));
   let payment = calculateLoan(amount, duration, APR);
-  let content = `<tr><th>Amount:</th><td>$${amount}</td></tr>
-                 <tr><th>Duration:</th><td>${duration} years</td></tr>
-                 <tr><th>APR:</th><td>${APR}%</td></tr>
-                 <tr><th>Monthly payment:</th><td>$${payment}</td></tr>`;
+  let content = `<tr>
+                  <th>Amount:</th>
+                    <td>
+                      <a href='/?amount=${
+                        amount - 100
+                      }&duration=${duration}'>- $100</a>
+                    </td>
+                    <td>$${amount}</td>
+                    <td>
+                      <a href='/?amount=${
+                        amount + 100
+                      }&duration=${duration}'>+ $100</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Duration:</th>
+                    <td>
+                      <a href='/?amount=${amount}&duration=${
+    duration - 1
+  }'>- 1 year</a>
+                    </td>
+                    <td>${duration} years</td>
+                    <td>
+                      <a href='/?amount=${amount}&duration=${
+    duration + 1
+  }'>+ 1 year</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>APR:</th>
+                    <td colspan='3'>${APR}%</td>
+                  </tr>
+                  <tr>
+                    <th>Monthly payment:</th>
+                    <td colspan='3'>$${payment}</td>
+                  </tr>`;
 
   return `${HTML_START}${content}${HTML_END}`;
 }
